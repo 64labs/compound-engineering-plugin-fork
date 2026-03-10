@@ -75,7 +75,17 @@ export async function writeOpenCodeBundle(outputRoot: string, bundle: OpenCodeBu
   }
 
   for (const commandFile of bundle.commandFiles) {
-    const dest = path.join(openCodePaths.commandDir, `${commandFile.name}.md`)
+    // Split colon-separated names into nested directories (e.g. "ce:plan" -> "ce/plan.md")
+    // to avoid colons in filenames which are invalid on Windows/NTFS
+    const parts = commandFile.name.split(":")
+    let dest: string
+    if (parts.length > 1) {
+      const nestedDir = path.join(openCodePaths.commandDir, ...parts.slice(0, -1))
+      await ensureDir(nestedDir)
+      dest = path.join(nestedDir, `${parts[parts.length - 1]}.md`)
+    } else {
+      dest = path.join(openCodePaths.commandDir, `${commandFile.name}.md`)
+    }
     const cmdBackupPath = await backupFile(dest)
     if (cmdBackupPath) {
       console.log(`Backed up existing command file to ${cmdBackupPath}`)

@@ -20,7 +20,16 @@ export async function writeGeminiBundle(outputRoot: string, bundle: GeminiBundle
 
   if (bundle.commands.length > 0) {
     for (const command of bundle.commands) {
-      await writeText(path.join(paths.commandsDir, `${command.name}.toml`), command.content + "\n")
+      // Split colon-separated names into nested directories (e.g. "ce:plan" -> "ce/plan.toml")
+      // to avoid colons in filenames which are invalid on Windows/NTFS
+      const parts = command.name.split(":")
+      if (parts.length > 1) {
+        const nestedDir = path.join(paths.commandsDir, ...parts.slice(0, -1))
+        await ensureDir(nestedDir)
+        await writeText(path.join(nestedDir, `${parts[parts.length - 1]}.toml`), command.content + "\n")
+      } else {
+        await writeText(path.join(paths.commandsDir, `${command.name}.toml`), command.content + "\n")
+      }
     }
   }
 

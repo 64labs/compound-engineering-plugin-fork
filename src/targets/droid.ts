@@ -9,7 +9,16 @@ export async function writeDroidBundle(outputRoot: string, bundle: DroidBundle):
   if (bundle.commands.length > 0) {
     await ensureDir(paths.commandsDir)
     for (const command of bundle.commands) {
-      await writeText(path.join(paths.commandsDir, `${command.name}.md`), command.content + "\n")
+      // Split colon-separated names into nested directories (e.g. "ce:plan" -> "ce/plan.md")
+      // to avoid colons in filenames which are invalid on Windows/NTFS
+      const parts = command.name.split(":")
+      if (parts.length > 1) {
+        const nestedDir = path.join(paths.commandsDir, ...parts.slice(0, -1))
+        await ensureDir(nestedDir)
+        await writeText(path.join(nestedDir, `${parts[parts.length - 1]}.md`), command.content + "\n")
+      } else {
+        await writeText(path.join(paths.commandsDir, `${command.name}.md`), command.content + "\n")
+      }
     }
   }
 
